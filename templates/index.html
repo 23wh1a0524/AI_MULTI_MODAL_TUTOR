@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Multimodal Tutor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500;700&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+  --shell:      #2b1a12;
+  --shell2:     #24140e;
+  --shell3:     #1a0f0a;
+
+  --sage:       #c7772d;
+  --sage2:      #e39a4a;
+
+  --paper:      #f8f1e7;
+  --paper2:     #f3e6d4;
+  --paper3:     #ead9c1;
+
+  --ink:        #1b120a;
+  --ink2:       #2e1d10;
+
+  --muted:      #7b5a3b;
+  --rule:       #d6bfa2;
+
+  --sienna:     #c75d1e;
+  --sienna2:    #e8842e;
+
+  --rust:       #b2321f;
+  --teal:       #e8842e;  /* replaced teal with orange tone */
+
+  --hist-w:     240px;
+  --hist-collapsed: 42px;
+}
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: var(--shell3);
+      font-family: 'Libre Baskerville', serif;
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      font-weight: 500;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      background: var(--shell3);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      height: 50px;
+      display: flex;
+      align-items: stretch;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      width: var(--hist-w);
+      flex-shrink: 0;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      transition: width 0.3s ease;
+    }
+
+    .brand.collapsed { width: var(--hist-collapsed); }
+
+    .brand-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--sienna2);
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-family: 'Caveat', cursive;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--paper);
+      white-space: nowrap;
+      overflow: hidden;
+      transition: opacity 0.2s, width 0.3s;
+    }
+
+    .brand.collapsed .brand-name { opacity: 0; width: 0; }
+
+    .subj-scroll {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      padding: 0 10px;
+      gap: 2px;
+      scrollbar-width: none;
+    }
+    .subj-scroll::-webkit-scrollbar { display: none; }
+
+    .subj-tab {
+      padding: 5px 13px;
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--sage2);
+      cursor: pointer;
+      border-radius: 3px;
+      white-space: nowrap;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+
+    .subj-tab:hover { color: var(--paper); background: rgba(255,255,255,0.05); }
+    .subj-tab.active { color: var(--paper); background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.1); }
+
+    /* ── Body ── */
+    .body-wrap {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── History panel ── */
+    .history-panel {
+      width: var(--hist-w);
+      flex-shrink: 0;
+      background: var(--shell2);
+      border-right: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s ease;
+      position: relative;
+    }
+
+    .history-panel.collapsed { width: var(--hist-collapsed); }
+
+    /* Toggle button */
+    .hist-toggle {
+      position: absolute;
+      right: -13px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px; height: 26px;
+      background: var(--shell2);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      font-size: 10px;
+      color: var(--sage2);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .hist-toggle:hover { color: var(--paper); background: var(--shell); }
+
+    .hist-toggle-icon { transition: transform 0.3s ease; }
+    .history-panel.collapsed .hist-toggle-icon { transform: rotate(180deg); }
+
+    /* History header */
+    .hist-head {
+      padding: 13px 16px 10px;
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--sage);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .history-panel.collapsed .hist-head { opacity: 0; }
+
+    .clear-btn {
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      color: rgba(255,255,255,0.15);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .clear-btn:hover { color: var(--rust); }
+
+    /* collapsed icon strip */
+    .hist-icon-strip {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 8px;
+    }
+
+    .history-panel.collapsed .hist-icon-strip { display: flex; }
+    .history-panel.collapsed .hist-list       { display: none; }
+
+    .hist-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+    }
+
+    .hist-dot.filled { background: var(--sienna2); }
+    .history-panel.collapsed {
+  box-shadow: inset -1px 0 0 rgba(255,255,255,0.05);
+}
+
+.hist-toggle {
+  font-weight: 700;
+  color: var(--sienna2);
+}
+
+.hist-toggle:hover {
+  color: var(--paper);
+  border-color: var(--sienna2);
+}
+
+    /* History list */
+    .hist-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .hist-list::-webkit-scrollbar { width: 3px; }
+    .hist-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+    .hist-empty {
+      font-family: 'Caveat', cursive;
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.15);
+      font-style: italic;
+      text-align: center;
+      padding: 20px 8px;
+    }
+
+    .hist-card {
+      padding: 9px 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 3px;
+      border-left: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .hist-card:hover { background: rgba(255,255,255,0.05); }
+    .hist-card.active { background: rgba(244,239,227,0.07); border-left-color: var(--sienna2); }
+
+    .hc-subj {
+      font-family: 'Inconsolata', monospace;
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--sienna2);
+      margin-bottom: 3px;
+    }
+
+    .hc-q {
+      font-size: 0.77rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.4;
+      font-style: italic;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .hc-time {
+      font-family: 'Inconsolata', monospace;
+      font-size: 8px;
+      color: rgba(255,255,255,0.17);
+      margin-top: 4px;
+    }
+
+    /* ── Content area ── */
+    .content-area {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+
+    /* ── Input col ── */
+    .input-col {
+      background: var(--paper);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--rule);
+      overflow: hidden;
+    }
+
+    .input-inner {
+      flex: 1;
+      overflow-y: auto;
+      padding: 26px 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .input-inner::-webkit-scrollbar { width: 3px; }
+    .input-inner::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 2px; }
+
+    .subj-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--teal);
+      border: 1px solid rgba(45,107,110,0.28);
+      background: rgba(45,107,110,0.06);
+      padding: 3px 10px;
+      border-radius: 2px;
+      margin-bottom: 20px;
+      width: fit-content;
+    }
+
+    /* context hint from history */
+    .context-hint {
+      background: rgba(155,92,40,0.07);
+      border: 1px solid rgba(155,92,40,0.18);
+      border-radius: 4px;
+      padding: 9px 12px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .context-hint.show { display: block; }
+
+    .ctx-label {
+      font-family: 'Inconsolata', monospace;
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--sienna);
+      margin-bottom: 4px;
+    }
+
+    .ctx-text {
+      font-size: 0.82rem;
+      color: var(--ink2);
+      font-style: italic;
+      line-height: 1.45;
+    }
+
+    .ctx-clear {
+      font-family: 'Inconsolata', monospace;
+      font-size: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      float: right;
+      margin-top: -16px;
+    }
+    .ctx-clear:hover { color: var(--rust); }
+
+    .field-lbl {
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid var(--rule);
+      border-radius: 5px;
+      color: var(--ink);
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1rem;
+      font-weight: 500;
+      padding: 12px 14px;
+      resize: none;
+      height: 110px;
+      outline: none;
+      line-height: 1.7;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 14px;
+    }
+
+    textarea::placeholder { color: var(--muted); font-style: italic; font-size: 0.88rem; }
+    textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(45,107,110,0.1); }
+
+    /* suggested follow-ups */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .sug-chip {
+      font-family: 'Inconsolata', monospace;
+      font-size: 10px;
+      color: var(--sienna);
+      border: 1px solid rgba(155,92,40,0.25);
+      background: rgba(155,92,40,0.05);
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .sug-chip:hover { background: rgba(155,92,40,0.12); border-color: rgba(155,92,40,0.4); }
+
+    /* mic + upload row */
+    .tools-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      background: transparent;
+      cursor: pointer;
+      font-family: 'Inconsolata', monospace;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    .tool-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .tool-btn.listening { border-color: var(--rust); color: var(--rust); animation: blink 0.9s infinite; }
+    .tool-btn.has-file  { border-color: var(--sage); color: var(--sage); border-style: solid; }
+    .tool-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .fname-tag {
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      color: var(--sage);
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+    .fname-tag.on { display: flex; }
+    .fname-rm { cursor: pointer; color: var(--muted); }
+    .fname-rm:hover { color: var(--rust); }
+
+    .btn-submit {
+      margin-top: auto;
+      background: var(--shell);
+      color: var(--paper);
+      border: none;
+      padding: 12px 22px;
+      font-family: 'Caveat', cursive;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: all 0.18s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-submit:hover { background: var(--shell2); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+    .btn-submit:active { transform: none; box-shadow: none; }
+    .btn-submit.loading { opacity: 0.6; pointer-events: none; }
+
+    .btn-spin { display:none; width:13px; height:13px; border:2px solid rgba(244,239,227,0.2); border-top-color:var(--paper); border-radius:50%; animation:spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-submit.loading .btn-spin { display: block; }
+    .btn-submit.loading .btn-arrow { display: none; }
+
+    /* ── Result col ── */
+    .result-col {
+      background: var(--paper2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .result-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 26px 28px 32px;
+    }
+
+    .result-scroll::-webkit-scrollbar { width: 3px; }
+    .result-scroll::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 2px; }
+
+    .result-empty {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      opacity: 0.3;
+    }
+
+    .re-icon { font-size: 2.8rem; }
+    .re-text { font-family:'Caveat',cursive; font-size:1rem; color:var(--muted); font-style:italic; }
+
+    #resultContent { display: none; animation: fadeup 0.3s ease both; }
+    @keyframes fadeup { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+    .res-stamp {
+      display: inline-block;
+      border: 2px double var(--sienna);
+      color: var(--sienna);
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 1px;
+      transform: rotate(-1deg);
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+
+    .res-sec {
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .res-sec::after { content:''; flex:1; height:1px; background:var(--rule); }
+
+    .res-answer {
+      font-size: 0.91rem;
+      line-height: 1.85;
+      color: var(--ink2);
+      white-space: pre-wrap;
+      padding-left: 12px;
+      border-left: 2px solid var(--rule);
+      margin-bottom: 24px;
+    }
+
+    .q-card { padding: 13px 0; border-bottom: 1px dashed var(--rule); }
+    .q-card:nth-child(1){animation: fadeup 0.3s 0.04s ease both;}
+    .q-card:nth-child(2){animation: fadeup 0.3s 0.09s ease both;}
+    .q-card:nth-child(3){animation: fadeup 0.3s 0.14s ease both;}
+
+    .qc-row { display:flex; gap:9px; align-items:flex-start; margin-bottom:8px; }
+    .qc-n { font-family:'Caveat',cursive; font-size:1.05rem; font-weight:700; color:var(--rust); flex-shrink:0; width:20px; }
+    .qc-t { font-size:0.87rem; color:var(--ink); line-height:1.5; }
+
+    .qc-opts { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-left:29px; margin-bottom:7px; }
+
+    .qc-opt {
+      font-size: 0.81rem;
+      color: var(--ink2);
+      padding: 5px 9px;
+      background: rgba(255,255,255,0.55);
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.14s;
+      line-height: 1.35;
+    }
+
+    .qc-opt:hover { border-color: var(--teal); background: rgba(45,107,110,0.05); }
+    .qc-opt.correct { border-color: var(--sage); background: rgba(90,110,93,0.09); color: var(--shell); }
+    .qc-opt.wrong   { border-color: var(--rust); background: rgba(158,58,40,0.07); color: var(--rust); }
+
+    .qc-show { background:none; border:none; font-family:'Caveat',cursive; font-size:0.87rem; color:var(--muted); cursor:pointer; text-decoration:underline; text-underline-offset:2px; margin-left:29px; }
+    .qc-show:hover { color: var(--teal); }
+
+    .qc-ans { display:none; margin-left:29px; font-family:'Inconsolata',monospace; font-size:9px; letter-spacing:0.06em; color:var(--sage); background:rgba(90,110,93,0.08); padding:3px 9px; border-radius:2px; }
+    .qc-ans.show { display:inline-block; }
+    .qc-ans::before { content:'✓ '; }
+
+    .err-box { font-family:'Inconsolata',monospace; font-size:11px; color:var(--rust); background:rgba(158,58,40,0.07); border:1px solid rgba(158,58,40,0.2); padding:12px 14px; border-radius:3px; }
+
+    /* ── Bottom ── */
+    .bottombar {
+      background: var(--shell3);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      height: 30px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .btm-note {
+      font-family: 'Inconsolata', monospace;
+      font-size: 8px;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.16);
+    }
+    .hist-group-label {
+  font-family: 'Inconsolata', monospace;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sienna2);
+  padding: 10px 11px 4px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 4px;
+}
+
+.hist-group-label:first-child { border-top: none; margin-top: 0; }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="brand" id="brandArea">
+    <div class="brand-dot"></div>
+    <div class="brand-name">AI Multimodal Tutor</div>
+  </div>
+  <div class="subj-scroll">
+    <div class="subj-tab active" data-subj="General"         onclick="pickSubj(this)">General</div>
+    <div class="subj-tab" data-subj="Mathematics"            onclick="pickSubj(this)">Mathematics</div>
+    <div class="subj-tab" data-subj="Physics"                onclick="pickSubj(this)">Physics</div>
+    <div class="subj-tab" data-subj="Chemistry"              onclick="pickSubj(this)">Chemistry</div>
+    <div class="subj-tab" data-subj="Biology"                onclick="pickSubj(this)">Biology</div>
+    <div class="subj-tab" data-subj="Computer Science"       onclick="pickSubj(this)">Computer Sc.</div>
+    <div class="subj-tab" data-subj="History"                onclick="pickSubj(this)">History</div>
+    <div class="subj-tab" data-subj="Geography"              onclick="pickSubj(this)">Geography</div>
+    <div class="subj-tab" data-subj="English"                onclick="pickSubj(this)">English</div>
+    <div class="subj-tab" data-subj="Economics"              onclick="pickSubj(this)">Economics</div>
+  </div>
+  <div style="padding:0 16px; display:flex; align-items:center; gap:12px; border-left:1px solid rgba(255,255,255,0.06); flex-shrink:0;">
+    <span style="font-family:'Inconsolata',monospace; font-size:10px; color:rgba(255,255,255,0.4); letter-spacing:0.08em;">{{ username }}</span>
+    <a href="/logout" style="font-family:'Inconsolata',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.2); text-decoration:none; transition:color 0.15s;" onmouseover="this.style.color='#9e3a28'" onmouseout="this.style.color='rgba(255,255,255,0.2)'">sign out</a>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="body-wrap">
+
+  <!-- History panel -->
+  <div class="history-panel" id="histPanel">
+    <div class="hist-toggle" onclick="toggleHist()" title="Toggle history">
+      <span class="hist-toggle-icon">◀</span>
+    </div>
+
+    <div class="hist-head">
+      History
+      <span class="clear-btn" onclick="clearHist()">clear</span>
+    </div>
+
+    <!-- collapsed dot strip -->
+    <div class="hist-icon-strip" id="iconStrip"></div>
+
+    <!-- full list -->
+    <div class="hist-list" id="histList">
+      <div class="hist-empty" id="histEmpty">No questions yet…</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content-area">
+
+    <!-- Input -->
+    <div class="input-col">
+      <div class="input-inner">
+
+        <div class="subj-pill" id="subjPill">General</div>
+
+        <!-- Context hint from history -->
+        <div class="context-hint" id="ctxHint">
+          <span class="ctx-clear" onclick="clearCtx()">✕</span>
+          <div class="ctx-label">Continuing from</div>
+          <div class="ctx-text" id="ctxText"></div>
+        </div>
+
+        <div class="field-lbl">Your question</div>
+        <textarea id="textInput" placeholder="Ask anything…"></textarea>
+
+        <!-- Suggested follow-ups -->
+        <div class="suggestions" id="suggestions"></div>
+
+        <!-- Tools -->
+        <div class="tools-row">
+          <button class="tool-btn" id="micBtn" onclick="toggleVoice()">
+            🎙 <span id="micLbl">speak</span>
+          </button>
+          <label class="tool-btn" id="uploadLbl">
+            <input type="file" id="imgInput" accept="image/*" onchange="onFile(this)"/>
+            📎 upload image
+          </label>
+          <div class="fname-tag" id="fnameTag">
+            <span id="fnameText"></span>
+            <span class="fname-rm" onclick="rmFile()">✕</span>
+          </div>
+        </div>
+
+        <button class="btn-submit" id="goBtn" onclick="doSubmit()">
+          <div class="btn-spin"></div>
+          <span id="goTxt">Get Explanation</span>
+          <span class="btn-arrow">→</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-col">
+      <div class="result-scroll" id="resultScroll">
+
+        <div class="result-empty" id="resultEmpty">
+          <div class="re-icon">📖</div>
+          <div class="re-text">Results will appear here</div>
+        </div>
+
+        <div id="resultContent">
+          <div class="res-stamp" id="resStamp">Topic</div>
+          <div class="res-sec">Explanation</div>
+          <div class="res-answer" id="resAnswer"></div>
+          <div class="res-sec">Practice Quiz</div>
+          <div id="quizCards"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Bottom -->
+<div class="bottombar">
+  <div class="btm-note">Groq LLaMA 3.3 · Tesseract OCR · Web Speech API</div>
+  <div class="btm-note" id="sessionCount">0 questions this session</div>
+</div>
+
+<script>
+  // ── State ──
+  let activeSubj  = 'General';
+  let sessions = {{ history | tojson }};
+  let ctxSession  = null;   // history item used as context
+  let histOpen    = true;
+  // Rebuild history on load
+window.addEventListener('DOMContentLoaded', () => {
+  if (sessions.length) {
+    rebuildHist();
+    updateIconStrip();
+    document.getElementById('sessionCount').textContent =
+      `${sessions.length} question${sessions.length !== 1 ? 's' : ''} this session`;
+  }
+});
+  let recog       = null;
+  let listening   = false;
+
+  // Follow-up suggestions per subject
+  const followUps = {
+    'General':        ['Can you give an example?', 'Explain it simpler', 'What are the applications?'],
+    'Mathematics':    ['Show me the formula', 'Solve a practice problem', 'Where is this used?'],
+    'Physics':        ['What is the formula?', 'Give a real-world example', 'How was this discovered?'],
+    'Chemistry':      ['Show the reaction', 'Explain the mechanism', 'Real-world applications?'],
+    'Biology':        ['Explain at cell level', 'How does this relate to evolution?', 'Give an example organism'],
+    'Computer Science':['Show pseudocode', 'What is the time complexity?', 'Give a use case'],
+    'History':        ['What was the cause?', 'What were the effects?', 'Who were the key figures?'],
+    'Geography':      ['Show me on a map context', 'Economic impact?', 'Climate factors?'],
+    'English':        ['Give a sentence example', 'What is the literary device?', 'Compare to another work'],
+    'Economics':      ['Real-world example?', 'Historical context?', 'What are the effects?'],
+  };
+
+  // ── History toggle ──
+  function toggleHist() {
+    histOpen = !histOpen;
+    const panel = document.getElementById('histPanel');
+    const brand = document.getElementById('brandArea');
+    panel.classList.toggle('collapsed', !histOpen);
+    brand.classList.toggle('collapsed', !histOpen);
+    updateIconStrip();
+  }
+
+  function updateIconStrip() {
+  const strip = document.getElementById('iconStrip');
+
+  if (!sessions.length) {
+    strip.innerHTML = `
+      <div class="hist-dot"></div>
+      <div class="hist-dot"></div>
+      <div class="hist-dot"></div>
+    `;
+    return;
+  }
+
+  strip.innerHTML = sessions.slice(0, 8).map((s, i) =>
+    `<div class="hist-dot ${i === 0 ? 'filled' : ''}" title="${s.subj}"></div>`
+  ).join('');
+}
+
+  // ── Subject ──
+  function pickSubj(el) {
+    document.querySelectorAll('.subj-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    activeSubj = el.dataset.subj;
+    document.getElementById('subjPill').textContent = activeSubj;
+    document.getElementById('textInput').placeholder = `Ask a ${activeSubj} question…`;
+    renderSuggestions(activeSubj);
+  }
+
+  function renderSuggestions(subj) {
+    const chips = followUps[subj] || followUps['General'];
+    const el = document.getElementById('suggestions');
+    // Only show suggestions if there's history context
+    if (!ctxSession) { el.innerHTML = ''; return; }
+    el.innerHTML = chips.map(c =>
+      `<div class="sug-chip" onclick="useSuggestion('${c.replace(/'/g,"\\'")}')">↳ ${c}</div>`
+    ).join('');
+  }
+
+  function useSuggestion(text) {
+    document.getElementById('textInput').value = text;
+    document.getElementById('textInput').focus();
+  }
+
+  // ── Context from history ──
+  function setContext(session) {
+    ctxSession = session;
+    const q = session.q.length > 80 ? session.q.slice(0, 80) + '…' : session.q;
+    document.getElementById('ctxText').textContent = q;
+    document.getElementById('ctxHint').classList.add('show');
+    renderSuggestions(activeSubj);
+  }
+
+  function clearCtx() {
+    ctxSession = null;
+    document.getElementById('ctxHint').classList.remove('show');
+    document.getElementById('suggestions').innerHTML = '';
+  }
+
+  // ── File ──
+  function onFile(inp) {
+    if (!inp.files[0]) return;
+    document.getElementById('fnameText').textContent = inp.files[0].name;
+    document.getElementById('fnameTag').classList.add('on');
+    document.getElementById('uploadLbl').classList.add('has-file');
+  }
+
+  function rmFile() {
+    document.getElementById('imgInput').value = '';
+    document.getElementById('fnameTag').classList.remove('on');
+    document.getElementById('uploadLbl').classList.remove('has-file');
+  }
+
+  // ── Voice ──
+  function toggleVoice() {
+    const btn = document.getElementById('micBtn');
+    const lbl = document.getElementById('micLbl');
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      alert('Use Chrome for voice input.'); return;
+    }
+    if (listening) { recog.stop(); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recog = new SR();
+    recog.lang = 'en-IN';
+    recog.continuous = false;
+    recog.interimResults = false;
+    recog.onstart  = () => { listening = true;  btn.classList.add('listening');    lbl.textContent = 'stop'; };
+    recog.onresult = e  => { document.getElementById('textInput').value = e.results[0][0].transcript; };
+    recog.onend    = () => { listening = false; btn.classList.remove('listening'); lbl.textContent = 'speak'; };
+    recog.onerror  = e  => { listening = false; btn.classList.remove('listening'); lbl.textContent = 'speak'; if (e.error !== 'aborted') alert('Mic: ' + e.error); };
+    recog.start();
+  }
+
+  // ── Submit ──
+  async function doSubmit() {
+    const text  = document.getElementById('textInput').value.trim();
+    const image = document.getElementById('imgInput').files[0];
+    if (!text && !image) { alert('Enter a question or upload an image.'); return; }
+
+    const btn = document.getElementById('goBtn');
+    btn.classList.add('loading');
+    document.getElementById('goTxt').textContent = 'Thinking…';
+    document.getElementById('resultContent').style.display = 'none';
+    document.getElementById('resultEmpty').style.display   = 'none';
+
+    const fd = new FormData();
+
+    // Build prompt with optional context
+    let prompt = `[Subject: ${activeSubj}]`;
+    if (ctxSession) {
+      prompt += ` [Context: the student previously asked "${ctxSession.q}" and received an explanation about ${ctxSession.data.topic || activeSubj}. This is a follow-up question.]`;
+    }
+    prompt += ` ${text}`;
+
+    if (text)  fd.append('text_question', prompt);
+    fd.append('subject', activeSubj);
+    if (image) fd.append('image', image);
+
+    try {
+      const res  = await fetch('/ask', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) { showErr(data.error); return; }
+
+      renderResult(data);
+      pushHistory(text || '📷 Image', activeSubj, data);
+
+    } catch(e) {
+      showErr('Network error — is Flask running?');
+    } finally {
+      btn.classList.remove('loading');
+      document.getElementById('goTxt').textContent = 'Get Explanation';
+    }
+  }
+
+  // ── Render result ──
+  function renderResult(data) {
+    document.getElementById('resStamp').textContent  = (data.topic || activeSubj).toUpperCase();
+    document.getElementById('resAnswer').textContent = data.explanation || '';
+
+    const qc = document.getElementById('quizCards');
+    qc.innerHTML = '';
+    (data.quiz || []).forEach((q, i) => {
+      const opts = q.options.map(o =>
+        `<div class="qc-opt" onclick="pickOpt(this,'${o.charAt(0)}','${q.answer.charAt(0)}')">${o}</div>`
+      ).join('');
+      qc.innerHTML += `
+        <div class="q-card">
+          <div class="qc-row"><div class="qc-n">${i+1}.</div><div class="qc-t">${q.question}</div></div>
+          <div class="qc-opts">${opts}</div>
+          <button class="qc-show" onclick="showAns(this,'${q.answer}')">Show answer</button>
+          <div class="qc-ans">Correct: ${q.answer}</div>
+        </div>`;
+    });
+
+    document.getElementById('resultContent').style.display = 'block';
+    document.getElementById('resultScroll').scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function pickOpt(el, chosen, correct) {
+    el.closest('.qc-opts').querySelectorAll('.qc-opt')
+      .forEach(o => o.classList.remove('correct', 'wrong'));
+    el.classList.add(chosen === correct ? 'correct' : 'wrong');
+  }
+
+  function showAns(btn, ans) {
+    btn.nextElementSibling.classList.add('show');
+    btn.style.display = 'none';
+  }
+
+  function showErr(msg) {
+    document.getElementById('resultEmpty').style.display = 'none';
+    const rc = document.getElementById('resultContent');
+    rc.style.display = 'block';
+    rc.innerHTML = `<div class="err-box">⚠ ${msg}</div>`;
+    document.getElementById('goBtn').classList.remove('loading');
+    document.getElementById('goTxt').textContent = 'Get Explanation';
+  }
+
+  // ── History ──
+  function pushHistory(q, subj, data) {
+    sessions.unshift({ q, subj, data, time: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) });
+    document.getElementById('sessionCount').textContent = `${sessions.length} question${sessions.length !== 1 ? 's' : ''} this session`;
+    rebuildHist();
+    updateIconStrip();
+  }
+  function rebuildHist() {
+  const list = document.getElementById('histList');
+  list.querySelectorAll('.hist-card, .hist-group-label').forEach(e => e.remove());
+  document.getElementById('histEmpty').style.display = sessions.length ? 'none' : 'block';
+
+  // Group by subject
+  const groups = {};
+  sessions.forEach(s => {
+    const subj = s.subject || 'General';
+    if (!groups[subj]) groups[subj] = [];
+    groups[subj].push(s);
+  });
+
+  Object.entries(groups).forEach(([subj, items]) => {
+    // Group label
+    const label = document.createElement('div');
+    label.className = 'hist-group-label';
+    label.textContent = subj;
+    list.appendChild(label);
+
+    items.forEach((s, i) => {
+      const d = document.createElement('div');
+      d.className = 'hist-card' + (sessions.indexOf(s) === 0 ? ' active' : '');
+      d.innerHTML = `
+        <div class="hc-q">${s.question || s.q || 'Question'}</div>
+        <div class="hc-time">${s.time}</div>`;
+      d.onclick = () => {
+        list.querySelectorAll('.hist-card').forEach(c => c.classList.remove('active'));
+        d.classList.add('active');
+        renderResult(s);
+        setContext(s);
+      };
+      list.appendChild(d);
+    });
+  });
+}
+  function clearHist() {
+    if (!sessions.length || !confirm('Clear all history?')) return;
+    sessions = [];
+    clearCtx();
+    rebuildHist();
+    updateIconStrip();
+    document.getElementById('resultContent').style.display = 'none';
+    document.getElementById('resultEmpty').style.display   = 'flex';
+    document.getElementById('sessionCount').textContent = '0 questions this session';
+  }
+</script>
+</body>
+</html>

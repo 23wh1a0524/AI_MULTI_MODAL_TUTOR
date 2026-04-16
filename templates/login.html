@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — AI Multimodal Tutor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500;700&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --shell:     #252e28;
+      --shell2:    #1e2721;
+      --shell3:    #181f1b;
+      --paper:     #f4efe3;
+      --paper2:    #ede6d4;
+      --ink:       #1c1810;
+      --ink2:      #38301f;
+      --muted:     #857663;
+      --rule:      #cfc4ab;
+      --sienna:    #9b5c28;
+      --sienna2:   #be7a3a;
+      --rust:      #9e3a28;
+      --teal:      #2d6b6e;
+      --sage:      #5a6e5d;
+    }
+    html, body { height: 100%; }
+    body {
+      background: var(--shell3);
+      font-family: 'Libre Baskerville', serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--paper);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+    }
+
+    .card-top {
+      background: var(--shell);
+      padding: 28px 32px 24px;
+      text-align: center;
+    }
+
+    .logo-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--sienna2);
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .logo-name {
+      font-family: 'Caveat', cursive;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--paper);
+    }
+
+    .card-title {
+      font-family: 'Caveat', cursive;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--paper);
+      margin-top: 14px;
+    }
+
+    .card-sub {
+      font-family: 'Inconsolata', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-top: 4px;
+    }
+
+    .card-body { padding: 28px 32px 32px; }
+
+    .flash-msg {
+      background: rgba(158,58,40,0.1);
+      border: 1px solid rgba(158,58,40,0.25);
+      color: var(--rust);
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px;
+      padding: 9px 12px;
+      border-radius: 3px;
+      margin-bottom: 18px;
+    }
+
+    .field { margin-bottom: 16px; }
+
+    .field label {
+      display: block;
+      font-family: 'Inconsolata', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      color: var(--ink);
+      font-family: 'Libre Baskerville', serif;
+      font-size: 0.93rem;
+      padding: 10px 13px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .field input:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 2px rgba(45,107,110,0.1);
+    }
+
+    .btn-main {
+      width: 100%;
+      background: var(--shell);
+      color: var(--paper);
+      border: none;
+      padding: 12px;
+      font-family: 'Caveat', cursive;
+      font-size: 1.15rem;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.18s;
+      margin-top: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-main:hover { background: var(--shell2); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+
+    .switch-link {
+      text-align: center;
+      margin-top: 18px;
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .switch-link a {
+      color: var(--sienna);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .switch-link a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="card-top">
+    <div><span class="logo-dot"></span><span class="logo-name">AI Multimodal Tutor</span></div>
+    <div class="card-title">Welcome back</div>
+    <div class="card-sub">Sign in to continue</div>
+  </div>
+  <div class="card-body">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-msg">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+    <form method="POST">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="you@example.com" required/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="••••••••" required/>
+      </div>
+      <button class="btn-main" type="submit">Sign In →</button>
+    </form>
+    <div class="switch-link">Don't have an account? <a href="/signup">Sign up</a></div>
+  </div>
+</div>
+</body>
+</html>
