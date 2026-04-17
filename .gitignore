@@ -1,0 +1,25 @@
+# Environment file (secrets)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Flask instance + DB
+instance/
+*.db
+
+# Uploaded files
+uploads/
+
+# Virtual environments
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
