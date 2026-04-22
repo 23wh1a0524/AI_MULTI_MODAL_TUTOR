@@ -117,7 +117,7 @@ http://127.0.0.1:5000
 ```
 
 ## Demo Video Link
--[Watch Project Execution Video](https://drive.google.com/file/d/1uv36SEdT7JdGg7vtnWfbYyxWY6gr_kT2/view?usp=drive_link)
+-[Watch Project Execution Video](https://drive.google.com/file/d/17yvB2c7TzW-lq-3jBBPS7iG2Rrzbua9y/view?usp=drive_link)
 
 ## Notes
 
