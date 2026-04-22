@@ -117,10 +117,7 @@ http://127.0.0.1:5000
 ```
 
 ## Demo Video Link
-
-- GitHub repository: https://github.com/23wh1a0524/AI_MULTI_MODAL_TUTOR
-- Demo video: `https://drive.google.com/file/d/1uv36SEdT7JdGg7vtnWfbYyxWY6gr_kT2/view?usp=drive_link`
-
+-[Watch Project Execution Video](https://drive.google.com/file/d/1uv36SEdT7JdGg7vtnWfbYyxWY6gr_kT2/view?usp=drive_link)
 
 ## Notes
 
